@@ -1,3 +1,80 @@
+High level goal of this project is to design and implement a path planner that is able to create smooth, safe path for the car to follow along a 3 lane highway with traffic.
+
+Path planning involves Prediction, Behavior Planning and Trajectory generation.
+
+Note : All the code changes are in *main.cpp*
+
+## Prediction
+Purpose of this layer is to predict the behavior of other vehicles on the road based on sensor fusion data. In this project, a very simple Prediction is implemented and it just predicts the position of each of the vehicles using the sensor fusion data. This implementation assumes that other vehicles move at constant speed and predicts the future position the vehicles based on current position and velocity. 
+
+Constructs a vector of Vehicle objects and computes the position of the vehicles at the end of the points using current position and velocity. This is implemented starting from line number : 340
+
+
+## Behavior Planning
+Goal of Behavior Planning layer is to make a high level decision. This is implemented using,
+
+* Finite State machine
+* Cost Functions
+
+### Finite State machine
+Our Finite State machine has three states.
+
+* Keep Lane (KL) 
+* Lane Change Left (LCL) 
+* Lane Change Right (LCR) 
+
+*enum class State* defines these states (Line number : 42)
+
+Next step is to find all the possible future states for our car. This is performed by *PossibleNextStates()* - (Line number : 127). This function takes the current car lane and current state of the car to determine all possible next states.
+
+### Cost Functions
+
+Cost functions helps us in deciding the best possible next state to choose from all the possible state. *ComputeCost()* (Line number 219) returns the overall cost of choosing a particular future state. 
+
+I have implemented following cost functions.
+
+* Collision Cost
+* Lane Speed Cost
+* Target Lane Cost
+* Trajectory Jerk Cost
+
+
+##### Collision cost
+This is implemented in *ComputeLaneChangeCollisionCost()* (Line number 152). This binary cost function penalizes the lane changes if there are other vehicles in the target lane(lane that we are trying to move) . There are two thresholds *LANE_CHNG_FRONT_CLEARNCE* and *LANE_CHNG_BACK_CLEARNCE*. These constants define the clearance required in the s axis for safe lane change on the front and back. *Back clearance* is configured to be lower than the front clearance since we need more space in the front during lane change. However, if the car behind on the target line is faster than our car, we need more clearance to perform safe lane change. In this case the cost function dynamically updates the required clearance. This has the highest cost among other cost functions since avoiding collision is the highest priority.
+
+##### Lane Speed Cost
+This is implemented in *ComputeLaneSpeedCost()* (Line number 182). This helps in choosing faster lane when it is safe to do so. This cost function penalizes lanes that have slow moving traffic. *GetLaneSpeeds()* (Line number 90) function computes the speed of each lane. Speed of the vehicle just ahead of us(within 100 meters) in a lane is considered as the speed of that lane. Cost of a lane increases linearly if that lane's speed is below MAX_SPEED (49.5 MPH). 
+
+cost = Constant * ((Speed of the vehicle just ahead in the lane) - MAX_SPEED)
+
+A possible improvement is to use a logistic function instead of a linear function here.
+
+
+##### Target Lane Cost
+This is implemented in *ComputeTargetLanecost()* (Line number 199). We would like to be in the center lane when possible. This cost function increase the cost of being in lane other than center lane. This cost function has the lowest weight.
+
+
+##### Trajectory Jerk Cost
+This is implemented in *ComputeTrajectoryJerkCost()* (Line number 207). While running the path planner on the simulator it was observed that sometimes the longitudinal jerk is more than the specification and this happens when our car performs two lane changes one after the other in a short span of time. As an example, if the car changes lane from left lane to center lane and then immediately making a lane change to right. Or if the car tries to make a lane change and even before completing it trying to come back to the previous lane. I believe ideal way to compute this cost is by computing the jerk of the trajectory. To make things simple, this function assign high cost for lane shifts if the car just did a lane change. If there has been a lane shift in the last ~5 sec, penalize state changes that involve lane changes. This is not perfect, but it seems to work in our situation.
+
+## Trajectory Generation
+
+Based on the next state from Behavior Planning layer, here we compute the trajectory and speed of the car. Starting from line number 406.
+
+If there is a vehicle ahead of us in our lane within 30 meters, we slow down and try to match with the speed of the car we are following. If we are not following a car we try to maintain the optimal speed of 49.5 MPH.
+
+Most of the implementation about the trajectory generation is reused from project Q&A video. Basically we take two last points from previous points and 3 new way points that are 30, 60, 90 meters ahead of our car. We  use spline library to fit the curve. We reuse all the unused points from previous trajectory and then appends additional trajectory points created using spline interpolation.
+
+
+## Summary
+This path planner seems to work reasonably well. There are opportunities for improvements. I was able to run this on simulator incident free for more than twenty miles. (src\FinalScreenShot.png)
+
+
+#
+*Below description is provided by Udacity*
+#
+
+
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
    
