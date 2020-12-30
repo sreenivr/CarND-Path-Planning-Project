@@ -67,7 +67,8 @@ Most of the implementation about the trajectory generation is reused from projec
 
 
 ## Summary
-This path planner seems to work reasonably well. There are opportunities for improvements. I was able to run this on simulator incident free for more than twenty miles. (src\FinalScreenShot.png)
+This path planner seems to work reasonably well. There are opportunities for improvements. I was able to run this on simulator incident free for more than twenty miles. 
+![alt text](src/FinalScreenShot.png)
 
 
 #
